@@ -12,7 +12,7 @@ import java.util.List;
 public class OrderScheduler {
 
     private final OrderRepository orderRepository;
-    private final long fixedInterval = 60000; // 5 minutes in milliseconds
+    private final long fixedInterval = 300000; // 5 minutes in milliseconds
 
     public OrderScheduler(OrderRepository orderRepository) {
         this.orderRepository = orderRepository;
