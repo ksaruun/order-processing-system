@@ -37,10 +37,10 @@ public class OrderController {
         return ResponseEntity.ok(orderService.listOrders(Optional.ofNullable(status)));
     }
 
-    @PatchMapping("/{id}/update-status")
-    public ResponseEntity<Order> updateOrderStatus(@PathVariable UUID id, @RequestBody OrderStatus status) {
-        Order updatedOrder = orderService.updateOrderStatus(id, status);
-        return ResponseEntity.ok(updatedOrder);
+    @PatchMapping("/{id}/next")
+    public ResponseEntity<Order> advanceOrder(@PathVariable UUID id) {
+        Order next = orderService.moveToNextStatus(id);
+        return ResponseEntity.ok(next);
     }
 
     @PatchMapping("/{id}/cancel")
@@ -49,10 +49,4 @@ public class OrderController {
         return ResponseEntity.ok(cancelledOrder);
     }
 
-    // Simple exception handler for clean responses
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    @ExceptionHandler(OrderService.OrderConstraintException.class)
-    public String handleConstraintException(OrderService.OrderConstraintException ex) {
-        return ex.getMessage();
-    }
 }

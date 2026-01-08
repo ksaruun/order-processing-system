@@ -1,5 +1,6 @@
 package com.ecommerce.orderproc.service;
 
+import com.ecommerce.orderproc.exception.OrderNotFoundException;
 import com.ecommerce.orderproc.model.*;
 import com.ecommerce.orderproc.repository.OrderRepository;
 import org.springframework.stereotype.Service;
@@ -47,38 +48,16 @@ public class OrderService {
     }
 
     @Transactional
-    public Order updateOrderStatus(UUID id, OrderStatus status) {
+    public Order moveToNextStatus(UUID id){
         Order order = getOrderDetails(id);
-        if(order.getStatus() == OrderStatus.CANCELLED) {
-            throw new OrderConstraintException("Cannot update status of a CANCELLED order.");
-        }
-        else if(order.getStatus() == OrderStatus.DELIVERED) {
-            throw new OrderConstraintException("Cannot update status of a DELIVERED order.");
-        }else if(order.getStatus() == OrderStatus.PROCESSING && status == OrderStatus.PENDING) {
-            throw new OrderConstraintException("Cannot revert status from PROCESSING to PENDING.");
-        }else if(order.getStatus() == OrderStatus.SHIPPED && status == OrderStatus.PROCESSING) {
-            throw new OrderConstraintException("Cannot revert status from SHIPPED to PROCESSING.");
-        }
-        order.setStatus(status);
+        order.nextState();
         return orderRepository.save(order);
     }
 
     @Transactional
     public Order cancelOrder(UUID id) {
         Order order = getOrderDetails(id);
-
-        if (order.getStatus() != OrderStatus.PENDING) {
-            throw new OrderConstraintException("Order can only be cancelled if status is PENDING. Current status: " + order.getStatus());
-        }
-
-        order.setStatus(OrderStatus.CANCELLED);
+        order.cancelOrder();
         return orderRepository.save(order);
-    }
-
-    public static class OrderNotFoundException extends RuntimeException {
-        public OrderNotFoundException(String message) { super(message); }
-    }
-    public static class OrderConstraintException extends RuntimeException {
-        public OrderConstraintException(String message) { super(message); }
     }
 }

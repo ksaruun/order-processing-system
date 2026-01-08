@@ -22,10 +22,10 @@ public class OrderScheduler {
     @Scheduled(fixedRate = fixedInterval)
     @Transactional
     public void processPendingOrders() {
-        List<Order> pendingOrders = orderRepository.findByStatus(OrderStatus.PENDING);
-        pendingOrders.stream()
-                .filter(order -> order.getCreatedAt().toEpochMilli() < (System.currentTimeMillis() - fixedInterval))
-                .forEach(order -> order.setStatus(OrderStatus.PROCESSING));
-
+        List<Order> pending = orderRepository.findByStatus(OrderStatus.PENDING);
+        for (Order order : pending) {
+            order.nextState(); // Moves to ProcessingState
+            orderRepository.save(order);
+        }
     }
 }

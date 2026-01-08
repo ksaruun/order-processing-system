@@ -1,5 +1,6 @@
 package com.ecommerce.orderproc.model;
 
+import com.ecommerce.orderproc.model.state.*;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.Instant;
@@ -24,4 +25,33 @@ public class Order {
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> items;
+
+    @Transient // This field isn't saved to the DB, it's for logic only
+    private OrderState state = new PendingState();
+
+    @PostLoad
+    private void setInitialState() {
+        switch (this.status) {
+            case PENDING -> this.state = new PendingState();
+            case PROCESSING -> this.state = new ProcessingState();
+            case SHIPPED -> this.state = new ShippedState();
+            case DELIVERED -> this.state = new DeliveredState();
+            case CANCELLED -> this.state = new CancelledState();
+        }
+    }
+
+    // The methods now just "delegate" to the state object
+    public void nextState() {
+        state.next(this);
+        this.status = state.getStatus(); // Keep DB field in sync
+    }
+
+    public void cancelOrder() {
+        state.cancel(this);
+        this.status = state.getStatus();
+    }
+
+    public void setState(OrderState state) {
+        this.state = state;
+    }
 }
