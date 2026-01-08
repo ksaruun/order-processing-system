@@ -3,8 +3,10 @@ package com.ecommerce.orderproc.service;
 import com.ecommerce.orderproc.exception.OrderNotFoundException;
 import com.ecommerce.orderproc.model.*;
 import com.ecommerce.orderproc.repository.OrderRepository;
+import com.ecommerce.orderproc.service.producer.OrderEventProducer;
 import com.ecommerce.orderproc.strategy.PaymentFactory;
 import com.ecommerce.orderproc.strategy.PaymentStrategy;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
@@ -12,14 +14,18 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Service
+@Slf4j
 public class OrderService {
 
     private final OrderRepository orderRepository;
     private final PaymentFactory paymentFactory;
 
-    public OrderService(OrderRepository orderRepository, PaymentFactory paymentFactory) {
+    private final OrderEventProducer eventProducer;
+
+    public OrderService(OrderRepository orderRepository, PaymentFactory paymentFactory, OrderEventProducer eventProducer) {
         this.orderRepository = orderRepository;
         this.paymentFactory = paymentFactory;
+        this.eventProducer = eventProducer;
     }
 
     @Transactional
@@ -39,7 +45,9 @@ public class OrderService {
 
         order.setItems(items);
         Order savedOrder = orderRepository.save(order);
-        //Trigger Kafka Create Event
+        // Broadcast Event
+        log.info("Order Created: {}", savedOrder.getId());
+        eventProducer.sendOrderEvent(savedOrder, "OrderCreated");
         return savedOrder;
     }
 
@@ -57,7 +65,12 @@ public class OrderService {
     public Order moveToNextStatus(UUID id){
         Order order = getOrderDetails(id);
         order.nextState();
-        return orderRepository.save(order);
+        Order saved = orderRepository.save(order);
+        if(order.getStatus().equals(OrderStatus.PROCESSING)){
+            log.info("Order Processed: {}", order.getId());
+            eventProducer.sendOrderEvent(saved, "OrderCreated");
+        }
+        return saved;
     }
 
     @Transactional
@@ -68,14 +81,24 @@ public class OrderService {
     }
 
     @Transactional
-    public void payForOrder(UUID orderId, String paymentMethod) {
+    public void handlePayment(UUID orderId, String paymentMethod) {
         Order order = orderRepository.findById(orderId).orElseThrow();
         PaymentStrategy strategy = paymentFactory.getStrategy(paymentMethod);
         boolean success = strategy.process(order.getTotalAmount());
         if (success) {
             order.nextState(); // Move from PENDING to PROCESSED via State Pattern
             orderRepository.save(order);
-            // Trigger Kafka Event...
+            log.info("Order Payment Done: {}", order.getId());
+            eventProducer.sendOrderEvent(order, "PaymentDone");
         }
+    }
+
+    @Transactional
+    public void shipOrder(UUID id) {
+        Order order = orderRepository.findById(id).orElseThrow();
+        order.nextState(); // PROCESSED -> SHIPPED
+        orderRepository.save(order);
+        log.info("Order Shipped {}", order.getId());
+        //eventProducer.sendOrderEvent(order, "OrderShipped");
     }
 }
