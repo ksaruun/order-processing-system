@@ -8,7 +8,7 @@ public class CreditCardStrategy implements PaymentStrategy {
     @Override
     public boolean process(double amount) {
         System.out.println("Processing Credit Card payment of $" + amount);
-        return true; // Logic for Stripe/Square would go here
+        return true;
     }
 
     @Override

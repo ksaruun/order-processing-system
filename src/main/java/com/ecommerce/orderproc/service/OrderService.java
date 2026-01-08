@@ -6,6 +6,7 @@ import com.ecommerce.orderproc.repository.OrderRepository;
 import com.ecommerce.orderproc.service.producer.OrderEventProducer;
 import com.ecommerce.orderproc.strategy.PaymentFactory;
 import com.ecommerce.orderproc.strategy.PaymentStrategy;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,18 +16,12 @@ import java.util.UUID;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class OrderService {
 
     private final OrderRepository orderRepository;
     private final PaymentFactory paymentFactory;
-
     private final OrderEventProducer eventProducer;
-
-    public OrderService(OrderRepository orderRepository, PaymentFactory paymentFactory, OrderEventProducer eventProducer) {
-        this.orderRepository = orderRepository;
-        this.paymentFactory = paymentFactory;
-        this.eventProducer = eventProducer;
-    }
 
     @Transactional
     public Order createOrder(OrderRequest request) {
