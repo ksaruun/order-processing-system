@@ -3,9 +3,13 @@ package com.ecommerce.orderproc.model;
 import com.ecommerce.orderproc.model.state.*;
 import jakarta.persistence.*;
 import lombok.Data;
+import org.hibernate.cache.spi.support.AbstractReadWriteAccess;
+
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "customer_order")
@@ -53,5 +57,13 @@ public class Order {
 
     public void setState(OrderState state) {
         this.state = state;
+    }
+
+    public double getTotalAmount(){
+        //get total amount from items
+        double totalAmount = this.items.stream()
+                .mapToDouble(OrderItem::getPrice)
+                .sum();
+        return totalAmount;
     }
 }

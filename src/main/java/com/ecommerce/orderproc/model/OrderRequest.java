@@ -13,6 +13,6 @@ public class OrderRequest {
     public static class ItemRequest {
         private String productName;
         private int quantity;
-        private BigDecimal price;
+        private double price;
     }
 }

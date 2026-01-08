@@ -18,7 +18,7 @@ public class OrderItem {
 
     private String productName;
     private int quantity;
-    private BigDecimal price;
+    private double price;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false)

@@ -3,6 +3,8 @@ package com.ecommerce.orderproc.service;
 import com.ecommerce.orderproc.exception.OrderNotFoundException;
 import com.ecommerce.orderproc.model.*;
 import com.ecommerce.orderproc.repository.OrderRepository;
+import com.ecommerce.orderproc.strategy.PaymentFactory;
+import com.ecommerce.orderproc.strategy.PaymentStrategy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
@@ -13,9 +15,11 @@ import java.util.UUID;
 public class OrderService {
 
     private final OrderRepository orderRepository;
+    private final PaymentFactory paymentFactory;
 
-    public OrderService(OrderRepository orderRepository) {
+    public OrderService(OrderRepository orderRepository, PaymentFactory paymentFactory) {
         this.orderRepository = orderRepository;
+        this.paymentFactory = paymentFactory;
     }
 
     @Transactional
@@ -34,7 +38,9 @@ public class OrderService {
                 }).toList();
 
         order.setItems(items);
-        return orderRepository.save(order);
+        Order savedOrder = orderRepository.save(order);
+        //Trigger Kafka Create Event
+        return savedOrder;
     }
 
     public Order getOrderDetails(UUID id) {
@@ -59,5 +65,17 @@ public class OrderService {
         Order order = getOrderDetails(id);
         order.cancelOrder();
         return orderRepository.save(order);
+    }
+
+    @Transactional
+    public void payForOrder(UUID orderId, String paymentMethod) {
+        Order order = orderRepository.findById(orderId).orElseThrow();
+        PaymentStrategy strategy = paymentFactory.getStrategy(paymentMethod);
+        boolean success = strategy.process(order.getTotalAmount());
+        if (success) {
+            order.nextState(); // Move from PENDING to PROCESSED via State Pattern
+            orderRepository.save(order);
+            // Trigger Kafka Event...
+        }
     }
 }
