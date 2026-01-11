@@ -30,6 +30,9 @@ public class Order {
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> items;
 
+    @Version
+    private Long version;
+
     @Transient // This field isn't saved to the DB, it's for logic only
     private OrderState state = new PendingState();
 
